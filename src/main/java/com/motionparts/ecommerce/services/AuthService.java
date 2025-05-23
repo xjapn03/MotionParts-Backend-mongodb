@@ -57,7 +57,7 @@ public class AuthService {
 
     public User register(RegisterRequest request) {
         // Mapear los DTOs a las entidades correspondientes
-        User user = UserMapper.toUser(request.getUser(), request.getUserInfo(), passwordEncoder.encode(request.getUser().getPassword()));
+        User user = UserMapper.toUser(request.getUser(), request.getUserInfo(), request.getUser().getPassword());
 
         // Llamar al servicio para crear el usuario
         return userService.createUser(user);  // Pasamos solo el objeto User

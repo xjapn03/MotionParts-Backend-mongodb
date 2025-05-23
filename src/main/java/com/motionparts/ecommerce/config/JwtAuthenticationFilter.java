@@ -21,13 +21,19 @@ import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Collection;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Value("${app.jwt.secret}")
     private String secretKey;
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        String path = request.getServletPath();
+        return path.startsWith("/api/auth/login") || path.startsWith("/api/auth/register");
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -43,15 +49,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (claims != null) {
                 String username = claims.getSubject();
 
-                // Extraer roles desde el token JWT
-                @SuppressWarnings("unchecked")
-                List<Map<String, Object>> rolesMap = (List<Map<String, Object>>) claims.get("roles", List.class);
+                // ✅ Extraer roles como List<String> y mapear a authorities
+                Object rolesClaim = claims.get("roles");
+                Collection<SimpleGrantedAuthority> authorities = new ArrayList<>();
 
-                Collection<SimpleGrantedAuthority> authorities = rolesMap != null
-                        ? rolesMap.stream()
-                            .map(roleObj -> new SimpleGrantedAuthority("ROLE_" + roleObj.get("name").toString()))
-                            .collect(Collectors.toList())
-                        : List.of();
+                if (rolesClaim instanceof List<?> rolesList) {
+                    for (Object role : rolesList) {
+                        authorities.add(new SimpleGrantedAuthority("ROLE_" + role.toString()));
+                    }
+                }
 
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(username, null, authorities);
@@ -74,14 +80,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private Claims validateTokenAndGetClaims(String token) {
         try {
             Key signingKey = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
-
             return Jwts.parserBuilder()
                     .setSigningKey(signingKey)
                     .build()
                     .parseClaimsJws(token)
                     .getBody();
         } catch (Exception e) {
-            // Puedes agregar logs aquí si quieres ver por qué falló el token
             return null;
         }
     }
