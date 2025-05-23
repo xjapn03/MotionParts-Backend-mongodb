@@ -37,7 +37,7 @@ public class AuthController {
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
         try {
             String token = authService.authenticate(request);
-            return ResponseEntity.ok().body(token); // Puedes devolver un objeto con más info si quieres
+            return ResponseEntity.ok().body(token);
         } catch (Exception e) {
             return ResponseEntity.status(401).body("Credenciales inválidas");
         }
